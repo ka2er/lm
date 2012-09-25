@@ -778,7 +778,8 @@ class ListMovies():
         try:
 
             # if we have an imdb_id from opensubtitles for this hash
-            imdb_id = cache_hash[cur_hash]['o_imdb_id']
+            imdb_id = cache_hash[cur_hash]['o_imdb_id'] \
+            or self.get_imdb_id_from_from_nfo(self.path_from_hash( cur_hash )['path'], cur_hash)
 
             if imdb_id:
                 self.log.info("IMDb id stored from Opensubtites %s" % imdb_id)
@@ -823,6 +824,26 @@ class ListMovies():
             self.save_cache()
             sys.exit(2)
 
+
+    def get_imdb_id_from_from_nfo(self, movie_file, cur_hash):
+
+        """
+        try to find imdb number from nfo file if present
+        """
+        imdb_id = None
+        # no imdb ? maybe a nfo with imdb url ...
+        nfo_file = os.path.splitext(movie_file)[0]
+        nfo_file += '.nfo'
+
+        if(os.path.exists(nfo_file)):
+            self.log.info("nfo file found for hash: %s" % cur_hash)
+            nfo_content = open(nfo_file, 'r').read()
+            match = re.findall(r"imdb\.[^\/]+\/title\/tt(\d+)", nfo_content, re.IGNORECASE|re.MULTILINE)
+            if (match):
+                imdb_id = match[0]
+                self.log.info("Imdb ID found in nfo: %s" % imdb_id)
+
+        return imdb_id
 
     # ********** UNKNOW HASH MATCHER *****************************************
     def best_match(self, guess_title, guess_year, results=None):
@@ -1493,6 +1514,7 @@ if __name__ == "__main__":
         LM.reset_cache_files()
         sys.exit()
 
+    # retreive files to proceed
     files = LM.get_files(args)
 
     if options.delete_cache:
